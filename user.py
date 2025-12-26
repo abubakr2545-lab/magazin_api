@@ -1,22 +1,39 @@
-from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.orm import relationship
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
+from typing import Optional
 from datetime import datetime
 
-from utils.database import Base
+
+class UserBase(BaseModel):
+    """Базовая схема пользователя"""
+    email: EmailStr
+    full_name: Optional[str] = None
 
 
-class User(Base):
-    """Модель пользователя"""
-    __tablename__ = "users"
+class UserCreate(UserBase):
+    """Схема для регистрации пользователя"""
+    password: str = Field(min_length=6, description="Пароль должен быть не менее 6 символов")
+
+
+class UserLogin(BaseModel):
+    """Схема для входа пользователя"""
+    email: EmailStr
+    password: str
+
+
+class UserResponse(UserBase):
+    """Схема ответа пользователя"""
+    id: int
+    created_at: datetime
     
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(255), unique=True, nullable=False, index=True)
-    hashed_password = Column(String(255), nullable=False)
-    full_name = Column(String(200), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Отношения
-    orders = relationship("Order", back_populates="user")
-    
-    def __repr__(self):
-        return f"<User(id={self.id}, email='{self.email}')>"
+    model_config = ConfigDict(from_attributes=True)
+
+
+class Token(BaseModel):
+    """Схема JWT токена"""
+    access_token: str
+    token_type: str = "bearer"
+
+
+class TokenData(BaseModel):
+    """Данные из токена"""
+    user_id: Optional[int] = None

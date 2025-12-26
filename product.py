@@ -1,26 +1,38 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text, JSON
-from sqlalchemy.orm import relationship
-
-from utils.database import Base
+from pydantic import BaseModel, ConfigDict, Field
+from typing import Optional, List
 
 
-class Product(Base):
-    """Модель товара"""
-    __tablename__ = "products"
+class ProductBase(BaseModel):
+    """Базовая схема товара"""
+    name: str
+    description: Optional[str] = None
+    price: float = Field(gt=0, description="Цена должна быть больше 0")
+    category_id: int
+    image_url: Optional[str] = None
+    stock: int = Field(ge=0, default=0, description="Количество на складе")
+    sizes: List[str] = Field(default_factory=list)
+    colors: List[str] = Field(default_factory=list)
+
+
+class ProductCreate(ProductBase):
+    """Схема для создания товара"""
+    pass
+
+
+class ProductUpdate(BaseModel):
+    """Схема для обновления товара"""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = Field(None, gt=0)
+    category_id: Optional[int] = None
+    image_url: Optional[str] = None
+    stock: Optional[int] = Field(None, ge=0)
+    sizes: Optional[List[str]] = None
+    colors: Optional[List[str]] = None
+
+
+class ProductResponse(ProductBase):
+    """Схема ответа товара"""
+    id: int
     
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(200), nullable=False, index=True)
-    description = Column(Text, nullable=True)
-    price = Column(Float, nullable=False)
-    category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
-    image_url = Column(String(500), nullable=True)
-    stock = Column(Integer, default=0)
-    sizes = Column(JSON, default=list)  # ["S", "M", "L", "XL"]
-    colors = Column(JSON, default=list)  # ["Черный", "Белый", "Синий"]
-    
-    # Отношения
-    category = relationship("Category", back_populates="products")
-    order_items = relationship("OrderItem", back_populates="product")
-    
-    def __repr__(self):
-        return f"<Product(id={self.id}, name='{self.name}', price={self.price})>"
+    model_config = ConfigDict(from_attributes=True)

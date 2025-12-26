@@ -1,35 +1,47 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Enum
-from sqlalchemy.orm import relationship
+from pydantic import BaseModel, ConfigDict, Field
+from typing import List, Optional
 from datetime import datetime
-import enum
-
-from utils.database import Base
+from models.order import OrderStatus
 
 
-class OrderStatus(str, enum.Enum):
-    """Статусы заказа"""
-    PENDING = "pending"
-    CONFIRMED = "confirmed"
-    PROCESSING = "processing"
-    SHIPPED = "shipped"
-    DELIVERED = "delivered"
-    CANCELLED = "cancelled"
+class OrderItemCreate(BaseModel):
+    """Схема для создания элемента заказа"""
+    product_id: int
+    quantity: int = Field(gt=0, description="Количество должно быть больше 0")
+    size: Optional[str] = None
+    color: Optional[str] = None
 
 
-class Order(Base):
-    """Модель заказа"""
-    __tablename__ = "orders"
+class OrderItemResponse(BaseModel):
+    """Схема ответа элемента заказа"""
+    id: int
+    product_id: int
+    quantity: int
+    price: float
+    size: Optional[str] = None
+    color: Optional[str] = None
     
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    status = Column(Enum(OrderStatus), default=OrderStatus.PENDING, nullable=False)
-    total_price = Column(Float, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OrderCreate(BaseModel):
+    """Схема для создания заказа"""
+    items: List[OrderItemCreate] = Field(min_length=1, description="Заказ должен содержать хотя бы один товар")
+
+
+class OrderUpdate(BaseModel):
+    """Схема для обновления заказа"""
+    status: OrderStatus
+
+
+class OrderResponse(BaseModel):
+    """Схема ответа заказа"""
+    id: int
+    user_id: int
+    status: OrderStatus
+    total_price: float
+    created_at: datetime
+    updated_at: datetime
+    items: List[OrderItemResponse] = []
     
-    # Отношения
-    user = relationship("User", back_populates="orders")
-    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
-    
-    def __repr__(self):
-        return f"<Order(id={self.id}, user_id={self.user_id}, status='{self.status}')>"
+    model_config = ConfigDict(from_attributes=True)

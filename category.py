@@ -1,21 +1,35 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Text
-from sqlalchemy.orm import relationship
-
-from utils.database import Base
+from pydantic import BaseModel, ConfigDict
+from typing import Optional, List
 
 
-class Category(Base):
-    """Модель категории товаров"""
-    __tablename__ = "categories"
+class CategoryBase(BaseModel):
+    """Базовая схема категории"""
+    name: str
+    description: Optional[str] = None
+    parent_id: Optional[int] = None
+
+
+class CategoryCreate(CategoryBase):
+    """Схема для создания категории"""
+    pass
+
+
+class CategoryUpdate(BaseModel):
+    """Схема для обновления категории"""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    parent_id: Optional[int] = None
+
+
+class CategoryResponse(CategoryBase):
+    """Схема ответа категории"""
+    id: int
     
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), unique=True, nullable=False, index=True)
-    description = Column(Text, nullable=True)
-    parent_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CategoryWithSubcategories(CategoryResponse):
+    """Категория с подкатегориями"""
+    subcategories: List['CategoryResponse'] = []
     
-    # Отношения
-    parent = relationship("Category", remote_side=[id], backref="subcategories")
-    products = relationship("Product", back_populates="category")
-    
-    def __repr__(self):
-        return f"<Category(id={self.id}, name='{self.name}')>"
+    model_config = ConfigDict(from_attributes=True)
